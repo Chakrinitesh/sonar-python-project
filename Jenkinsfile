@@ -1,55 +1,56 @@
 pipeline {
     agent any
-    
-    environment {
-        SCANNER_HOME= tool 'sonar-scanner'
-    }
+     
+     environment {
+         SCANNER_HOME = tool 'sonar-scanner'
+          }
 
     stages {
-        
-        stage('Git Checkout') {
+        stage('Checkout') {
             steps {
-                git branch: 'main', credentialsId: 'git', url: 'https://github.com/jaiswaladi246/Multi-Tier-Python-Postgres.git'
+                git branch: 'master', url: 'https://github.com/Chakrinitesh/sonar-python-project.git'
             }
         }
-        
-stage('Setup Virtual Environment') {
-    steps {
-        sh '''
-        rm -rf venv  # Remove any existing virtual environments
-        python3 -m venv venv  # Create a new virtual environment
-        chmod -R 755 venv
-        bash -c "
-        source venv/bin/activate
-        pip install --upgrade pip
-        pip install -r requirements.txt
-        "
-        '''
-    }
-}
-   
-        stage('Test') {
+        stage('Install EVEN & dependencies ') {
             steps {
                 sh '''
-                bash -c "
-                source venv/bin/activate
-                pytest --cov=app --cov-report=xml
-				pytest --cov=app --cov-report=term-missing --disable-warnings
-                "
-                '''
+                    # Remove any existing virtual environments
+                    rm -rf venv
+                    # Create a new virtual environment
+                    python3 -m venv venv
+                    chmod -R 755 venv
+                    # Activate the virtual environment andinstall dependencies
+                    bash -c "
+                    source venv/bin/activate && \
+                    pip install --upgrade pip && \
+                    pip install --upgrade pip setuptools wheel && \
+                    pip install -r requirements.txt
+                    "
+                   '''
             }
         }
-        
-         stage('Sonar') {
+        stage('Test') {
             steps {
-                withSonarQubeEnv('sonar-server') {
-                          sh ''' $SCANNER_HOME/bin/sonar-scanner -Dsonar.projectKey=Python-project \
-                          -Dsonar.projectName=Python-project \
-                          -Dsonar.exclusions=venv/** \
-                          -Dsonar.sources=. \
-                          -Dsonar.python.coverage.reportPaths=coverage.xml'''
-                }
+                sh ''' 
+                     . venv/bin/activate 
+                     pytest --cov=app --cov-report=xml --cov-report=term-missing --disable-warnings
+                       
+                   '''
             }
         }
-    }
+        stage ('Sonar') {
+              steps {
+                  withSonarQubeEnv('sonarqube'){
+                      sh '''
+                            $SCANNER_HOME/bin/sonar-scanner \
+                            -Dsonar.projectKey=Python-project \
+                            -Dsonar.projectName=Pythonproject \
+                            -Dsonar.exclusions=venv/** \
+                            -Dsonar.sources=. \
+                            -Dsonar.python.coverage.reportPaths=coverage.xml
+                          '''    
+                  }
+              }
+          }
+      }
 }
